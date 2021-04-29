@@ -1,7 +1,7 @@
 # CostcoJP_mail-magazine (Beta version)
 These are scripts that can scrape, extract and store mail-magazine information from Costco Japan since January 2021.
 
-![51211314855966](https://user-images.githubusercontent.com/30718867/116509925-12c59e80-a8ff-11eb-9b96-a6b9c7a71869.jpg)
+![51211332780062](https://user-images.githubusercontent.com/30718867/116511449-6c2ecd00-a901-11eb-9e15-276901f57d9f.jpg)
 
 Attention! The entire scripts only work for Costco Japan!
 
