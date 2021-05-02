@@ -2,6 +2,7 @@ import io
 from PIL import Image
 import requests
 
+
 from google.cloud import vision
 
 class Processor:

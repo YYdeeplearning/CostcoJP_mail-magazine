@@ -1,4 +1,3 @@
-# import validator
 import os
 
 from collector import Collector
@@ -15,24 +14,30 @@ def main():
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= "Google_Service_API.json"
 
     site = input("Please paste Costco link here: ")
-    # assert validator.url(site) == True, "Please input correct url!"
-        
 
     Costco_collector = Collector(site)
     itemDict = Costco_collector.collectItem()
-    discountDate = Costco_collector.collectDate()
+    discount_date = Costco_collector.collectDate()
 
     record_dict = {}
     for itemID, url in itemDict.items():
         Costco_processor = Processor(itemID, url)
         textList = Costco_processor.detect_text()
-        Costco_extractor = Extractor(textList)
+        Costco_extractor = Extractor(itemID, textList)
         result = Costco_extractor.itemInfo()
         record_dict[itemID.replace('s','').replace('_1','')] = result
-        break
+        # break
 
-    Costco_recorder = Recorder(discountDate, record_dict )
-    Costco_recorder.record_json()
+    Costco_recorder = Recorder(discount_date, record_dict)
+    
+    try:
+        os.chdir('Costco_{}'.format(discount_date[-4:]))
+    except:
+        os.mkdir('Costco_{}'.format(discount_date[-4:]))
+        os.chdir('Costco_{}'.format(discount_date[-4:]))
+
+    Costco_recorder.record_allVersion()
+    
 
 
 if __name__ == "__main__":

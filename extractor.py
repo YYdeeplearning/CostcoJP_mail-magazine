@@ -1,5 +1,6 @@
 import itertools
 import re
+from parse import *
 
 from google.cloud import translate_v2 as translate
 
@@ -20,10 +21,12 @@ def isMeasure(word):
         return False
 
 class Extractor:
-    def __init__(self, OCRlist)-> list:
+    def __init__(self, itemID, OCRlist)-> list:
+        self.itemID = itemID
         self.OCRlist = OCRlist
     
-    def detect_lang(self):        
+    def detect_lang(self):   
+        
         contentDict = {}
         translate_client = translate.Client()
         for index, word in enumerate(self.OCRlist):
@@ -35,16 +38,32 @@ class Extractor:
             contentDict[word] = index, langTag
         return contentDict
 
-
-    def IndexSlice(self):
-        contentDict = self.detect_lang()
-
-        for text, info in contentDict.items():
-            index, langTag = info
-            YenMark = ['¥', 'Y', '半', '辛']
-            if any(currency in text for currency in YenMark):
-                price_index = index
+    def indexMatch(self):
+        self.itemID = self.itemID.replace('s','').replace('_1','').strip()
+        id_index = 0
+        filter_object = filter(lambda x: 'ITEM#' in x, self.OCRlist)
+        filter_ITEM = list(filter_object)[0]
         
+        detect_ID = parse('ITEM# {}',filter_ITEM).fixed[0].strip()
+        id_index = self.OCRlist.index(filter_ITEM)
+                
+        assert self.itemID in detect_ID, "Item ID doesn't match!"
+        return id_index
+
+
+    def indexSlice(self):
+        contentDict = self.detect_lang()
+        id_index = self.indexMatch()
+
+        jpEnd_index = price_index = period_index = 0
+        
+        YenMark = ['¥', '羊', '半', '辛', '価格']
+        try:
+            price_match = [text for text in self.OCRlist if any(currency in text for currency in YenMark)][0]
+            price_index = self.OCRlist.index(price_match)
+        except:
+            price_index = id_index
+
         for text in reversed(self.OCRlist):
             if '/' in text or '販売' in text:
                 period_index = self.OCRlist.index(text)
@@ -52,7 +71,6 @@ class Extractor:
         
         nameDict = dict(itertools.islice(contentDict.items(), 0, price_index))
         
-        Measurement = ['mm','cm','m', 'ml','L','g','kg','°C']
         for text, info in reversed(nameDict.items()):
             index, langTag = info
             if langTag != 'ja' and isMeasure(text) == True:
@@ -65,30 +83,24 @@ class Extractor:
         return jpEnd_index, price_index, period_index
         
     def price(self):
-        jpEnd_index, price_index, period_index = self.IndexSlice()
+        jpEnd_index, price_index, period_index = self.indexSlice()
         priceTag = self.OCRlist[price_index]
-        try:
-            priceTag = priceTag.replace('半','¥').replace('辛','¥').replace('Y', '¥')
-        except:
-            None
-        YenMark = priceTag.rindex('¥')
-        price = priceTag[YenMark:]
+        priceTag = priceTag.replace('半','¥').replace('辛','¥').replace('Y', '¥').replace('羊','¥')        
+        price = priceTag
         return price       
     
     def jpName(self):
-        contentDict = self.detect_lang()
-        jpEnd_index, _, _ = self.IndexSlice()
-        jpName = ' '.join(list(dict(itertools.islice(contentDict.items(), 0, jpEnd_index+1)).keys()))
+        jpEnd_index, _, _ = self.indexSlice()
+        jpName = ' '.join(self.OCRlist[0:jpEnd_index+1])
         return jpName
     
     def enName(self):
-        contentDict = self.detect_lang()
-        jpEnd_index, price_index, _ = self.IndexSlice()
-        enName = ' '.join(list(dict(itertools.islice(contentDict.items(), jpEnd_index+1, price_index)).keys()))
+        jpEnd_index, price_index, _ = self.indexSlice()
+        enName = ' '.join(self.OCRlist[jpEnd_index+1: price_index])
         return enName
         
     def period(self):
-        _, _, period_index = self.IndexSlice()
+        _, _, period_index = self.indexSlice()
         period = self.OCRlist[period_index]
         try:
             period = period.replace('|','')
@@ -99,7 +111,7 @@ class Extractor:
     
     def description(self):
         contentDict = self.detect_lang()
-        _, price_index, period_index = self.IndexSlice()
+        _, price_index, period_index = self.indexSlice()
         description = ' '.join(list(dict(itertools.islice(contentDict.items(), price_index+1, period_index-1)).keys()))
         if len(description) == 0:
             description = 'No description'
@@ -117,3 +129,4 @@ class Extractor:
     def __str__(self):
         jpName,enName,price,period,description = self.itemInfo()
         return "jpName: {}\nenName: {}\nPrice: {}\nPeriod: {}\nDescription: {}\n\n\n".format(jpName,enName,price,period,description)
+
