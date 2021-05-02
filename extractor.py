@@ -85,7 +85,7 @@ class Extractor:
     def price(self):
         jpEnd_index, price_index, period_index = self.indexSlice()
         priceTag = self.OCRlist[price_index]
-        priceTag = priceTag.replace('半','¥').replace('辛','¥').replace('Y', '¥').replace('羊','¥')        
+        priceTag = priceTag.replace('半','¥').replace('辛','¥').replace('Y', '¥').replace('羊','¥').replace('率','¥')        
         price = priceTag
         return price       
     
